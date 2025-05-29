@@ -35,5 +35,38 @@ const getPieceById = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// EDITAR pieza
+const updatePiece = async (req, res) => {
+  const { id } = req.params;
+  const { forma, posicion_relativa } = req.body;
+  try {
+    const query = `
+      MATCH (p:Pieza {id: $id})
+      SET p.forma = $forma, p.posicion_relativa = $posicion_relativa
+      RETURN p
+    `;
+    const result = await neo4j.executeQuery(query, { id, forma, posicion_relativa });
+    if (!result[0]) return res.status(404).json({ error: "Pieza no encontrada" });
+    res.json({ message: "Pieza actualizada" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
-module.exports = { getAllPieces, getPieceById };
+// ELIMINAR pieza
+const deletePiece = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const query = `
+      MATCH (p:Pieza {id: $id})
+      DETACH DELETE p
+    `;
+    await neo4j.executeQuery(query, { id });
+    res.json({ message: "Pieza eliminada" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+module.exports = { getAllPieces, getPieceById, updatePiece,  deletePiece};
