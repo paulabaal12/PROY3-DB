@@ -4,8 +4,8 @@ const helmet = require('helmet');
 const cors = require('cors');
 
 const puzzleRoutes = require('./routes/puzzleRoutes');
-const pieceRoutes = require('./routes/pieces');          // <--- AÑADE ESTO
-const connectionRoutes = require('./routes/connections'); // <--- AÑADE ESTO
+const pieceRoutes = require('./routes/piecesRoute');          // <--- AÑADE ESTO
+const connectionRoutes = require('./routes/connectionRoute'); // <--- AÑADE ESTO
 
 const app = express();
 

@@ -69,7 +69,7 @@ const crearRompecabezasInteractivo = async () => {
   const pieces = [];
   const n = parseInt(await ask("¿Cuántas piezas desea ingresar?: "));
   for (let i = 0; i < n; i++) {
-    console.log(\n Pieza ${i + 1});
+    console.log(`\n Pieza ${i + 1}`);
     const pid = await ask("  ID: ");
     const forma = await ask("  Forma: ");
     const pos = await ask("  Posición relativa: ");
@@ -79,7 +79,7 @@ const crearRompecabezasInteractivo = async () => {
   const connections = [];
   const c = parseInt(await ask("¿Cuántas conexiones desea ingresar?: "));
   for (let i = 0; i < c; i++) {
-    console.log(\n Conexión ${i + 1});
+    console.log(`\n Conexión ${i + 1}`);
     const sourceId = await ask("  ID de pieza origen: ");
     const targetId = await ask("  ID de pieza destino: ");
     const sourceSide = await ask("  Lado desde origen (ej: abajo): ");
@@ -88,7 +88,7 @@ const crearRompecabezasInteractivo = async () => {
   }
 
   try {
-    const res = await axios.post(${BASE_URL}/puzzles, {
+    const res = await axios.post(`${BASE_URL}/puzzles`, {
       puzzle,
       pieces,
       connections,
@@ -104,10 +104,10 @@ const crearRompecabezasInteractivo = async () => {
 // --- Listar todos los rompecabezas ---
 const listarRompecabezas = async () => {
   try {
-    const res = await axios.get(${BASE_URL}/puzzles);
+    const res = await axios.get(`${BASE_URL}/puzzles`);
     console.log("\nRompecabezas encontrados:");
     res.data.forEach((p) => {
-      console.log(- ID: ${p.id} | Tema: ${p.tema} | Tipo: ${p.tipo});
+      console.log(`- ID: ${p.id} | Tema: ${p.tema} | Tipo: ${p.tipo}`);
     });
   } catch (err) {
     console.error(" Error al listar rompecabezas:", err.response?.data || err.message);
@@ -119,7 +119,7 @@ const listarRompecabezas = async () => {
 const obtenerRompecabezas = async () => {
   const id = await ask("Ingrese el ID del rompecabezas: ");
   try {
-    const res = await axios.get(${BASE_URL}/puzzles/${id});
+    const res = await axios.get(`${BASE_URL}/puzzles/${id}`);
     console.log("\nResultado:");
     console.dir(res.data, { depth: null });
   } catch (err) {
@@ -131,10 +131,10 @@ const obtenerRompecabezas = async () => {
 // --- Listar todas las piezas ---
 const listarPiezas = async () => {
   try {
-    const res = await axios.get(${BASE_URL}/pieces);
+    const res = await axios.get(`${BASE_URL}/pieces`);
     console.log("\nPiezas encontradas:");
     res.data.forEach((piece) => {
-      console.log(- ID: ${piece.id} | Forma: ${piece.forma} | Posición: ${piece.posicion_relativa});
+      console.log(`- ID: ${piece.id} | Forma: ${piece.forma} | Posición: ${piece.posicion_relativa}`);
     });
   } catch (err) {
     console.error(" Error al listar piezas:", err.response?.data || err.message);
@@ -146,7 +146,7 @@ const listarPiezas = async () => {
 const obtenerPiezaPorId = async () => {
   const id = await ask("Ingrese el ID de la pieza: ");
   try {
-    const res = await axios.get(${BASE_URL}/pieces/${id});
+    const res = await axios.get(`${BASE_URL}/pieces/${id}`);
     console.log("\nPieza encontrada:");
     console.dir(res.data, { depth: null });
   } catch (err) {
@@ -158,10 +158,10 @@ const obtenerPiezaPorId = async () => {
 // --- Listar todas las relaciones ---
 const listarRelaciones = async () => {
   try {
-    const res = await axios.get(${BASE_URL}/connections);
+    const res = await axios.get(`${BASE_URL}/connections`);
     console.log("\nRelaciones encontradas:");
     res.data.forEach((conn) => {
-      console.log(- ${conn.sourceId} [${conn.sourceSide}] --> ${conn.targetId} [${conn.targetSide}]);
+      console.log(`- ${conn.sourceId} [${conn.sourceSide}] --> ${conn.targetId} [${conn.targetSide}]`);
     });
   } catch (err) {
     console.error(" Error al listar relaciones:", err.response?.data || err.message);
@@ -173,7 +173,7 @@ const listarRelaciones = async () => {
 const obtenerRelacionPorId = async () => {
   const id = await ask("Ingrese el ID de la relación: ");
   try {
-    const res = await axios.get(${BASE_URL}/connections/${id});
+    const res = await axios.get(`${BASE_URL}/connections/${id}`);
     console.log("\nRelación encontrada:");
     console.dir(res.data, { depth: null });
   } catch (err) {
@@ -188,10 +188,10 @@ const generarInstrucciones = async () => {
   const piezaInicial = await ask("ID de la pieza inicial: ");
 
   try {
-    const res = await axios.get(${BASE_URL}/puzzles/${id}/instrucciones?start=${piezaInicial});
+    const res = await axios.get(`${BASE_URL}/puzzles/${id}/instrucciones?start=${piezaInicial}`);
     console.log("\n Instrucciones para armar el rompecabezas:");
     res.data.instrucciones.forEach((linea, i) => {
-      console.log(${i + 1}. ${linea});
+      console.log(`${i + 1}. ${linea}`);
     });
   } catch (err) {
     console.error("Error al generar instrucciones:", err.response?.data || err.message);

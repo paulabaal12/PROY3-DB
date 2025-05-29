@@ -5,29 +5,27 @@ const createPuzzle = async (req, res) => {
 
   try {
     // Crear rompecabezas
-    const puzzleQuery = 
-      CREATE (r:Rompecabezas {
-        id: $id,
-        tema: $tema,
-        tipo: $tipo
-      })
-      RETURN r
-    ;
+    const puzzleQuery = `
+    CREATE (r:Rompecabezas {
+      id: $id,
+      tema: $tema,
+      tipo: $tipo
+    })
+    RETURN r
+  `;
     
     await neo4j.executeQuery(puzzleQuery, puzzle);
 
     // Crear piezas y relaciones
     for (const piece of pieces) {
-      const pieceQuery = 
+      const pieceQuery = `
       MATCH (r:Rompecabezas {id: $puzzleId})
       MERGE (p:Pieza {
         id: $id
       })
       SET p.forma = $forma, p.posicion_relativa = $posicion_relativa
       MERGE (p)-[:PERTENECE_A]->(r)
-    ;
-    
-      
+      `;
       await neo4j.executeQuery(pieceQuery, {
         puzzleId: puzzle.id,
         ...piece
@@ -37,8 +35,7 @@ const createPuzzle = async (req, res) => {
     // Crear conexiones entre piezas
     for (const connection of req.body.connections || []) {
       const { sourceId, targetId, sourceSide, targetSide } = connection;
-      
-      const connectionQuery = 
+      const connectionQuery = `
         MATCH (p1:Pieza {id: $sourceId}), (p2:Pieza {id: $targetId})
         CREATE (p1)-[:CONECTA_CON {
           lado: $sourceSide
@@ -46,8 +43,7 @@ const createPuzzle = async (req, res) => {
         CREATE (p2)-[:CONECTA_CON {
           lado: $targetSide
         }]->(p1)
-      ;
-      
+      `;
       await neo4j.executeQuery(connectionQuery, {
         sourceId,
         targetId,
@@ -66,10 +62,12 @@ const getPuzzle = async (req, res) => {
   const { id } = req.params;
 
   const query = 
-    MATCH (r:Rompecabezas {id: $id})
+   ` 
+  MATCH (r:Rompecabezas {id: $id})
     OPTIONAL MATCH (r)<-[:PERTENECE_A]-(p:Pieza)
     OPTIONAL MATCH (p)-[c:CONECTA_CON]->(p2:Pieza)
     RETURN r, collect(DISTINCT p) AS piezas, collect(DISTINCT {from: p.id, to: p2.id, lado: c.lado}) AS conexiones
+    `
   ;
 
   try {
@@ -101,6 +99,7 @@ const getPuzzleInstructions = async (req, res) => {
   }
 
   const query = 
+  `
     MATCH (r:Rompecabezas {id: $puzzleId})<-[:PERTENECE_A]-(start:Pieza {id: $startId})
     CALL apoc.path.expand(start, 'CONECTA_CON>', null, 0, 100) YIELD path
     WITH nodes(path) AS piezas, relationships(path) AS conexiones
@@ -109,6 +108,7 @@ const getPuzzleInstructions = async (req, res) => {
     RETURN from.id AS desdeId, from.forma AS formaDesde, from.posicion_relativa AS posDesde,
            conn.lado AS ladoDesde,
            to.id AS haciaId, to.forma AS formaHacia, to.posicion_relativa AS posHacia
+  `
   ;
 
   try {
@@ -124,9 +124,8 @@ const getPuzzleInstructions = async (req, res) => {
       const formaHacia = record.formaHacia;
       const posHacia = record.posHacia;
 
-      return Paso ${idx + 1}: Desde la pieza ${desde} (forma ${formaDesde}, posición ${posDesde}), conéctala por el lado ${ladoDesde} con la pieza ${hacia} (forma ${formaHacia}, posición ${posHacia}).;
+      return `Step ${idx + 1}: From piece ${desde} (shape ${formaDesde}, position ${posDesde}), connect it by side ${ladoDesde} with piece ${hacia} (shape ${formaHacia}, position ${posHacia}).`;
     });
-
     res.json({ instrucciones });
   } catch (error) {
     console.error('Error al obtener instrucciones del rompecabezas:', error);
@@ -135,9 +134,11 @@ const getPuzzleInstructions = async (req, res) => {
 };
 async function getPuzzleGraph(puzzleId) {
   const query = 
+  `
     MATCH (r:Rompecabezas {id: $puzzleId})<-[:PERTENECE_A]-(p:Pieza)
     OPTIONAL MATCH (p)-[c:CONECTA_CON]->(p2:Pieza)
     RETURN p.id AS from, p2.id AS to, c.lado AS lado
+    `
   ;
   const results = await neo4j.executeQuery(query, { puzzleId });
   const graph = {};
@@ -160,7 +161,7 @@ function recorridoBFS(grafo, piezaInicial) {
     if (visitados.has(actual)) continue;
     visitados.add(actual);
     if (anterior) {
-      pasos.push(Conecta la pieza ${actual} al lado ${lado} de ${anterior});
+      pasos.push(`Conecta la pieza ${actual} al lado ${lado} de ${anterior}`);
     }
     for (const conn of (grafo[actual] || [])) {
       if (!visitados.has(conn.destinoId)) {
@@ -178,7 +179,7 @@ function recorridoDFS(grafo, piezaInicial) {
   function dfs(actual, anterior, lado) {
     visitados.add(actual);
     if (anterior) {
-      pasos.push(Conecta la pieza ${actual} al lado ${lado} de ${anterior});
+      pasos.push(`Conecta la pieza ${actual} al lado ${lado} de ${anterior}`);
     }
     for (const conn of (grafo[actual] || [])) {
       if (!visitados.has(conn.destinoId)) {
@@ -215,10 +216,10 @@ const buildPuzzleSteps = async (req, res) => {
 };
 const getAllPuzzles = async (req, res) => {
   try {
-    const query = 
+    const query = `
       MATCH (r:Rompecabezas)
       RETURN r
-    ;
+    `;
     const result = await neo4j.executeQuery(query);
     const puzzles = result.map(r => r.r.properties);
     res.json(puzzles);
@@ -226,6 +227,7 @@ const getAllPuzzles = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 module.exports = { 
   createPuzzle, 
