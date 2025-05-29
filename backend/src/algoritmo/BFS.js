@@ -1,5 +1,3 @@
-// controllers/BFS.js
-// Lógica de armado del rompecabezas usando BFS (o DFS), para importar en puzzleController.js
 
 const neo4j = require('../utils/neo4j');
 

@@ -172,7 +172,7 @@ function recorridoBFS(grafo, piezaInicial) {
   return pasos;
 }
 
-// ---- DFS (si lo quieres usar también) ----
+// ---- DFS 
 function recorridoDFS(grafo, piezaInicial) {
   const visitados = new Set();
   const pasos = [];
@@ -195,7 +195,7 @@ function recorridoDFS(grafo, piezaInicial) {
 const buildPuzzleSteps = async (req, res) => {
   const puzzleId = req.params.id;
   const startId = req.query.start;
-  const alg = req.query.alg || 'bfs'; // Cambia a 'dfs' si quieres DFS por defecto
+  const alg = req.query.alg || 'bfs'; 
 
   if (!startId) {
     return res.status(400).json({ error: 'Debes especificar la pieza inicial con ?start=ID' });

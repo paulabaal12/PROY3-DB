@@ -4,8 +4,8 @@ const helmet = require('helmet');
 const cors = require('cors');
 
 const puzzleRoutes = require('./routes/puzzleRoutes');
-const pieceRoutes = require('./routes/piecesRoute');          // <--- AÑADE ESTO
-const connectionRoutes = require('./routes/connectionRoute'); // <--- AÑADE ESTO
+const pieceRoutes = require('./routes/piecesRoute');          
+const connectionRoutes = require('./routes/connectionRoute'); 
 
 const app = express();
 
@@ -16,8 +16,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/puzzles', puzzleRoutes);
-app.use('/api/pieces', pieceRoutes);          // <--- AÑADE ESTO
-app.use('/api/connections', connectionRoutes); // <--- AÑADE ESTO
+app.use('/api/pieces', pieceRoutes);         
+app.use('/api/connections', connectionRoutes); 
 
 // Manejo de errores
 app.use((err, req, res, next) => {
@@ -36,5 +36,5 @@ app.listen(PORT, () => {
     console.log(`  - GET    /api/pieces/:id`);
     console.log(`  - GET    /api/connections`);
     console.log(`  - GET    /api/connections/:id`);
-    require('./menu'); // Menú interactivo por consola
+    require('./menu'); 
 });
