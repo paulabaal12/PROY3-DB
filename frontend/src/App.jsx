@@ -1,33 +1,34 @@
-import { useState, useEffect } from "react"
-import { Plus, Trash2, Play, Puzzle, Search, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
-import GrafoPuzzle from "./components/GrafoPuzzle"
-import './App.css'
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Play, Puzzle, Search, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import GrafoPuzzle from "./components/GrafoPuzzle";
+import './App.css';
+import EditarPuzzleForm from "./components/EditarPuzzleForm";
 
-const API_URL = "http://localhost:3000/api"
+const API_URL = "http://localhost:3000/api";
 
 function App() {
   // Estados para el registro
-  const [puzzle, setPuzzle] = useState({ id: "", tema: "", tipo: "" })
-  const [pieces, setPieces] = useState([])
-  const [connections, setConnections] = useState([])
+  const [puzzle, setPuzzle] = useState({ id: "", tema: "", tipo: "" });
+  const [pieces, setPieces] = useState([]);
+  const [connections, setConnections] = useState([]);
 
   // Estados para la consulta
-  const [puzzles, setPuzzles] = useState([])
-  const [selectedPuzzleId, setSelectedPuzzleId] = useState("")
-  const [pasos, setPasos] = useState([])
-  const [alg, setAlg] = useState("bfs")
-  const [startId, setStartId] = useState("")
+  const [puzzles, setPuzzles] = useState([]);
+  const [selectedPuzzleId, setSelectedPuzzleId] = useState("");
+  const [pasos, setPasos] = useState([]);
+  const [alg, setAlg] = useState("bfs");
+  const [startId, setStartId] = useState("");
 
   // Estados de UI
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [solvingLoading, setSolvingLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState("register")
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [solvingLoading, setSolvingLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("register");
 
   // Estado para el grafo
-  const [grafo, setGrafo] = useState({ nodes: [], edges: [] })
-  const [detallePuzzle, setDetallePuzzle] = useState(null)
+  const [grafo, setGrafo] = useState({ nodes: [], edges: [] });
+  const [detallePuzzle, setDetallePuzzle] = useState(null);
 
   // Función para hacer peticiones HTTP
   const fetchData = async (url, options = {}) => {
@@ -38,49 +39,44 @@ function App() {
           ...options.headers
         },
         ...options
-      })
-      
+      });
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
-      return await response.json()
+      return await response.json();
     } catch (err) {
-      console.error('Fetch error:', err)
-      throw err
+      console.error('Fetch error:', err);
+      throw err;
     }
-  }
+  };
 
   // Consulta de puzzles existentes
   useEffect(() => {
     const loadPuzzles = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const data = await fetchData(`${API_URL}/puzzles`)
-        setPuzzles(Array.isArray(data) ? data : [])
+        const data = await fetchData(`${API_URL}/puzzles`);
+        setPuzzles(Array.isArray(data) ? data : []);
       } catch (err) {
-        setPuzzles([])
-        setError("Error al cargar los puzzles")
+        setPuzzles([]);
+        setError("Error al cargar los puzzles");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    
-    loadPuzzles()
-  }, [message])
+    };
+    loadPuzzles();
+  }, [message]);
 
   // Cargar datos del grafo cuando se selecciona un puzzle
   useEffect(() => {
     if (!selectedPuzzleId) {
-      setGrafo({ nodes: [], edges: [] })
-      return
+      setGrafo({ nodes: [], edges: [] });
+      return;
     }
-
     const loadPuzzleData = async () => {
       try {
-        const data = await fetchData(`${API_URL}/puzzles/${selectedPuzzleId}`)
-        const { piezas = [], conexiones = [] } = data
-        
+        const data = await fetchData(`${API_URL}/puzzles/${selectedPuzzleId}`);
+        const { piezas = [], conexiones = [] } = data;
         setGrafo({
           nodes: piezas.map((p) => ({
             id: p.id,
@@ -91,48 +87,47 @@ function App() {
             target: c.to,
             label: c.lado,
           })),
-        })
+        });
       } catch (err) {
-        setGrafo({ nodes: [], edges: [] })
+        setGrafo({ nodes: [], edges: [] });
       }
-    }
-
-    loadPuzzleData()
-  }, [selectedPuzzleId])
+    };
+    loadPuzzleData();
+  }, [selectedPuzzleId]);
 
   // Handlers para registro de rompecabezas
-  const addPiece = () => setPieces([...pieces, { id: "", forma: "", posicion_relativa: "" }])
+  const addPiece = () => setPieces([...pieces, { id: "", forma: "", posicion_relativa: "" }]);
   const addConnection = () =>
-    setConnections([...connections, { sourceId: "", targetId: "", sourceSide: "", targetSide: "" }])
+    setConnections([...connections, { sourceId: "", targetId: "", sourceSide: "", targetSide: "" }]);
 
   const removePiece = (index) => {
-    const updated = pieces.filter((_, i) => i !== index)
-    setPieces(updated)
-  }
+    const updated = pieces.filter((_, i) => i !== index);
+    setPieces(updated);
+  };
 
   const removeConnection = (index) => {
-    const updated = connections.filter((_, i) => i !== index)
-    setConnections(updated)
-  }
+    const updated = connections.filter((_, i) => i !== index);
+    setConnections(updated);
+  };
 
   const handlePieceChange = (i, field, value) => {
-    const updated = [...pieces]
-    updated[i][field] = value
-    setPieces(updated)
-  }
+    const updated = [...pieces];
+    updated[i][field] = value;
+    setPieces(updated);
+  };
 
   const handleConnectionChange = (i, field, value) => {
-    const updated = [...connections]
-    updated[i][field] = value
-    setConnections(updated)
-  }
+    const updated = [...connections];
+    updated[i][field] = value;
+    setConnections(updated);
+  };
 
+  // Crear nuevo rompecabezas
   const submitPuzzle = async (e) => {
-    e.preventDefault()
-    setError("")
-    setMessage("")
-    setLoading(true)
-
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setLoading(true);
     try {
       await fetchData(`${API_URL}/puzzles`, {
         method: 'POST',
@@ -141,62 +136,101 @@ function App() {
           pieces,
           connections,
         })
-      })
-      
-      setMessage("¡Rompecabezas creado exitosamente!")
-      setPuzzle({ id: "", tema: "", tipo: "" })
-      setPieces([])
-      setConnections([])
-
-      // Clear message after 3 seconds
-      setTimeout(() => setMessage(""), 3000)
+      });
+      setMessage("¡Rompecabezas creado exitosamente!");
+      setPuzzle({ id: "", tema: "", tipo: "" });
+      setPieces([]);
+      setConnections([]);
+      setTimeout(() => setMessage(""), 3000);
     } catch (err) {
-      setError("Error al crear el rompecabezas. Verifique los datos e intente nuevamente.")
+      setError("Error al crear el rompecabezas. Verifique los datos e intente nuevamente.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  // Consultar pasos
+  // Consultar pasos de solución
   const obtenerPasos = async () => {
-    setPasos([])
-    setError("")
-    setSolvingLoading(true)
-
+    setPasos([]);
+    setError("");
+    setSolvingLoading(true);
     try {
-      const data = await fetchData(`${API_URL}/puzzles/${selectedPuzzleId}/steps?start=${startId}&alg=${alg}`)
-      setPasos(data.instrucciones || [])
+      const data = await fetchData(`${API_URL}/puzzles/${selectedPuzzleId}/steps?start=${startId}&alg=${alg}`);
+      setPasos(data.instrucciones || []);
     } catch (err) {
-      setError("No se pudo obtener los pasos. Verifique la pieza inicial y el rompecabezas seleccionado.")
+      setError("No se pudo obtener los pasos. Verifique la pieza inicial y el rompecabezas seleccionado.");
     } finally {
-      setSolvingLoading(false)
+      setSolvingLoading(false);
     }
-  }
-  
-  const TabButton = ({ id, label, icon: Icon }) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      className={`puzzle-tab-button ${
-        activeTab === id ? "puzzle-tab-active" : "puzzle-tab-inactive"
-      }`}
-    >
-      <Icon size={18} />
-      {label}
-    </button>
-  )
+  };
 
+  // EDITAR un puzzle
+  const editarPuzzle = async (id, updated) => {
+    setLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      await fetchData(`${API_URL}/puzzles/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updated),
+      });
+      setMessage("Rompecabezas actualizado correctamente");
+      // Recargar la lista de puzzles
+      const data = await fetchData(`${API_URL}/puzzles`);
+      setPuzzles(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError("Error al actualizar el rompecabezas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ELIMINAR un puzzle
+  const eliminarPuzzle = async (id) => {
+    setLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      await fetchData(`${API_URL}/puzzles/${id}`, {
+        method: 'DELETE',
+      });
+      setMessage("Rompecabezas eliminado correctamente");
+      // Recargar la lista de puzzles
+      const data = await fetchData(`${API_URL}/puzzles`);
+      setPuzzles(Array.isArray(data) ? data : []);
+      setDetallePuzzle(null);
+    } catch (err) {
+      setError("Error al eliminar el rompecabezas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Modal: ver detalle
   const verDetallePuzzle = async (puzzleId) => {
     setDetallePuzzle(null);
     try {
       const data = await fetchData(`${API_URL}/puzzles/${puzzleId}`);
       setDetallePuzzle({
         id: data.rompecabezas.id,
+        tema: data.rompecabezas.tema,
+        tipo: data.rompecabezas.tipo,
         piezas: data.piezas,
       });
     } catch (err) {
       setDetallePuzzle({ error: "No se pudo cargar el detalle del puzzle." });
     }
   };
+  const TabButton = ({ id, label, icon: Icon }) => (
+    <button
+      onClick={() => setActiveTab(id)}
+      className={`puzzle-tab-button ${activeTab === id ? "puzzle-tab-active" : "puzzle-tab-inactive"
+        }`}
+    >
+      <Icon size={18} />
+      {label}
+    </button>
+  );
 
   return (
     <div className="puzzle-app">
@@ -507,7 +541,6 @@ function App() {
               <Search size={24} />
               Rompecabezas Registrados
             </h2>
-
             {loading ? (
               <div className="puzzle-loading">
                 <Loader2 size={32} className="puzzle-spinner" />
@@ -529,6 +562,32 @@ function App() {
                         <p className="puzzle-item-meta">Tipo: {puzzle.tipo}</p>
                       </div>
                     </div>
+                    {/* Botones para editar y eliminar */}
+                    <div className="puzzle-item-actions" style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button
+                        className="puzzle-button puzzle-button-primary"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setDetallePuzzle({
+                            ...puzzle,
+                            modoEdicion: true, // Activar modo edición
+                          });
+                        }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="puzzle-button puzzle-button-danger"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (window.confirm("¿Seguro que deseas eliminar este rompecabezas?")) {
+                            eliminarPuzzle(puzzle.id);
+                          }
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -544,6 +603,49 @@ function App() {
                 </button>
               </div>
             )}
+            {/* Puzzle Detail & Edición */}
+            {detallePuzzle && (
+              <div className="puzzle-modal-overlay" onClick={() => setDetallePuzzle(null)}>
+                <div className="puzzle-modal-card" onClick={e => e.stopPropagation()}>
+                  <button className="puzzle-modal-close" onClick={() => setDetallePuzzle(null)}>×</button>
+                  {detallePuzzle.modoEdicion ? (
+                    // FORMULARIO DE EDICIÓN
+                    <EditarPuzzleForm
+                      puzzle={detallePuzzle}
+                      onClose={() => setDetallePuzzle(null)}
+                      onSave={async (updated) => {
+                        await editarPuzzle(detallePuzzle.id, updated);
+                        setDetallePuzzle(null);
+                      }}
+                    />
+                  ) : detallePuzzle.error ? (
+                    <p>{detallePuzzle.error}</p>
+                  ) : (
+                    <>
+                      <h3>Detalle de {detallePuzzle.id}</h3>
+                      <p>Tema: {detallePuzzle.tema}</p>
+                      <p>Tipo: {detallePuzzle.tipo}</p>
+                      <p>Cantidad de piezas: {detallePuzzle.piezas?.length || 0}</p>
+                      <ul>
+                        {detallePuzzle.piezas?.map((pieza, idx) => (
+                          <li key={idx}>
+                            ID: {pieza.id}, Forma: {pieza.forma}, Posición: {pieza.posicion_relativa}
+                          </li>
+                        ))}
+                      </ul>
+                      {/* Botón para editar desde el modal */}
+                      <button
+                        className="puzzle-button puzzle-button-primary"
+                        style={{ marginTop: 16 }}
+                        onClick={() => setDetallePuzzle({ ...detallePuzzle, modoEdicion: true })}
+                      >
+                        Editar
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -552,19 +654,30 @@ function App() {
           <div className="puzzle-modal-overlay" onClick={() => setDetallePuzzle(null)}>
             <div className="puzzle-modal-card" onClick={e => e.stopPropagation()}>
               <button className="puzzle-modal-close" onClick={() => setDetallePuzzle(null)}>×</button>
-              {detallePuzzle.error ? (
-                <p>{detallePuzzle.error}</p>
+              {/* SOLO MUESTRA UNO SEGÚN modoEdicion */}
+              {detallePuzzle.modoEdicion ? (
+                <EditarPuzzleForm
+                  puzzle={detallePuzzle}
+                  onClose={() => setDetallePuzzle(null)}
+                  onSave={async (updated) => {
+                    await editarPuzzle(detallePuzzle.id, updated);
+                    setDetallePuzzle(null);
+                  }}
+                />
               ) : (
                 <>
                   <h3>Detalle de {detallePuzzle.id}</h3>
-                  <p>Cantidad de piezas: {detallePuzzle.piezas.length}</p>
-                  <ul>
-                    {detallePuzzle.piezas.map((pieza, idx) => (
-                      <li key={idx}>
-                        ID: {pieza.id}, Forma: {pieza.forma}, Posición: {pieza.posicion_relativa}
-                      </li>
-                    ))}
-                  </ul>
+                  <p>Tema: {detallePuzzle.tema}</p>
+                  <p>Tipo: {detallePuzzle.tipo}</p>
+                  <p>Cantidad de piezas: {detallePuzzle.piezas?.length || 0}</p>
+                  {/* ...más detalle aquí... */}
+                  <button
+                    className="puzzle-button puzzle-button-primary"
+                    style={{ marginTop: 16 }}
+                    onClick={() => setDetallePuzzle({ ...detallePuzzle, modoEdicion: true })}
+                  >
+                    Editar
+                  </button>
                 </>
               )}
             </div>
@@ -576,3 +689,4 @@ function App() {
 }
 
 export default App
+
