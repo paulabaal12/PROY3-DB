@@ -82,6 +82,18 @@ function GrafoPuzzle({ nodes = [], edges = [] }) {
     return positions;
   };
 
+  const createCircularLayout = (nodes) => {
+    const centerX = 400;
+    const centerY = 350;
+    const radius = Math.max(120, Math.min(250, nodes.length * 32));
+    const angleStep = (2 * Math.PI) / nodes.length;
+    return nodes.map((node, i) => ({
+      ...node,
+      x: centerX + radius * Math.cos(i * angleStep - Math.PI / 2),
+      y: centerY + radius * Math.sin(i * angleStep - Math.PI / 2),
+    }));
+  };
+
   useEffect(() => {
     console.log('Procesando layout para nodos:', nodes.length);
     console.log('Nodos recibidos:', nodes);
@@ -91,10 +103,13 @@ function GrafoPuzzle({ nodes = [], edges = [] }) {
       return;
     }
 
-    // Usar nuestro algoritmo de layout personalizado
-    const positionedNodes = createForceLayout(nodes, edges);
-    console.log('Nodos posicionados:', positionedNodes);
-    setLayoutNodes(positionedNodes);
+
+    if (nodes.length <= 15) {
+      setLayoutNodes(createCircularLayout(nodes));
+    } else {
+      const positionedNodes = createForceLayout(nodes, edges);
+      setLayoutNodes(positionedNodes);
+    }
   }, [nodes, edges]);
 
   const calculateTextOffset = (sourceNode, targetNode) => {
@@ -127,7 +142,7 @@ function GrafoPuzzle({ nodes = [], edges = [] }) {
     const { x: x1, y: y1 } = sourceNode;
     const { x: x2, y: y2 } = targetNode;
 
-    // Calcular puntos de conexión en el borde de los círculos
+   
     const dx = x2 - x1;
     const dy = y2 - y1;
     const length = Math.sqrt(dx * dx + dy * dy);
