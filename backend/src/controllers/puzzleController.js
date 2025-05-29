@@ -137,18 +137,42 @@ async function getPuzzleGraph(puzzleId) {
   `
     MATCH (r:Rompecabezas {id: $puzzleId})<-[:PERTENECE_A]-(p:Pieza)
     OPTIONAL MATCH (p)-[c:CONECTA_CON]->(p2:Pieza)
-    RETURN p.id AS from, p2.id AS to, c.lado AS lado
-    `
-  ;
+    RETURN p {
+      .id, .forma, .posicion_relativa
+    } AS pieza,
+    p2 {
+      .id, .forma, .posicion_relativa
+    } AS destino,
+    c.lado AS lado
+  `;
+  
   const results = await neo4j.executeQuery(query, { puzzleId });
+
   const graph = {};
+
   results.forEach(r => {
-    if (!r.from) return;
-    if (!graph[r.from]) graph[r.from] = [];
-    if (r.to) graph[r.from].push({ destinoId: r.to, lado: r.lado });
+    if (!r.pieza?.id) return;
+
+    const id = r.pieza.id;
+    if (!graph[id]) {
+      graph[id] = {
+        pieza: r.pieza,
+        conexiones: []
+      };
+    }
+
+    if (r.destino?.id) {
+      graph[id].conexiones.push({
+        destinoId: r.destino.id,
+        destinoPieza: r.destino,
+        lado: r.lado
+      });
+    }
   });
+
   return graph;
 }
+
 
 // ---- BFS ----
 function recorridoBFS(grafo, piezaInicial) {
@@ -160,44 +184,59 @@ function recorridoBFS(grafo, piezaInicial) {
     const { actual, anterior, lado } = queue.shift();
     if (visitados.has(actual)) continue;
     visitados.add(actual);
-    if (anterior) {
-      if (lado === 'arriba' || lado === 'abajo') {
-        pasos.push(`Conecta la pieza ${actual} ${lado} de ${anterior}`);
-      } else {
-        pasos.push(`Conecta la pieza ${actual} al lado ${lado} de ${anterior}`);
-      }
+
+    const pieza = grafo[actual]?.pieza;
+    const anteriorPieza = grafo[anterior]?.pieza;
+
+    if (anterior && pieza && anteriorPieza) {
+      pasos.push(
+        `Desde la pieza ${anterior} (forma ${anteriorPieza.forma}, posición ${anteriorPieza.posicion_relativa}), ` +
+        `conéctala por el lado ${lado} con la pieza ${actual} ` +
+        `(forma ${pieza.forma}, posición ${pieza.posicion_relativa})`
+      );
     }
-    for (const conn of (grafo[actual] || [])) {
+
+    for (const conn of grafo[actual]?.conexiones || []) {
       if (!visitados.has(conn.destinoId)) {
         queue.push({ actual: conn.destinoId, anterior: actual, lado: conn.lado });
       }
     }
   }
-  return pasos;
+
+  return pasos.map((msg, i) => `Paso ${i + 1}: ${msg}`);
 }
+
 
 // ---- DFS 
 function recorridoDFS(grafo, piezaInicial) {
   const visitados = new Set();
   const pasos = [];
-  function dfs(actual, anterior, lado) {
+
+  function dfs(actual, anterior = null, lado = null) {
+    if (visitados.has(actual)) return;
     visitados.add(actual);
-    if (anterior) {
-      if (lado === 'arriba' || lado === 'abajo') {
-        pasos.push(`Conecta la pieza ${actual} ${lado} de ${anterior}`);
-      } else {
-        pasos.push(`Conecta la pieza ${actual} al lado ${lado} de ${anterior}`);
-      }
+
+    const pieza = grafo[actual]?.pieza;
+    const anteriorPieza = grafo[anterior]?.pieza;
+
+    if (anterior && pieza && anteriorPieza) {
+      pasos.push(
+        `Desde la pieza ${anterior} (forma ${anteriorPieza.forma}, posición ${anteriorPieza.posicion_relativa}), ` +
+        `conéctala por el lado ${lado} con la pieza ${actual} ` +
+        `(forma ${pieza.forma}, posición ${pieza.posicion_relativa})`
+      );
     }
-    for (const conn of (grafo[actual] || [])) {
-      if (!visitados.has(conn.destinoId)) {
-        dfs(conn.destinoId, actual, conn.lado);
-      }
+
+    for (const conn of grafo[actual]?.conexiones || []) {
+      dfs(conn.destinoId, actual, conn.lado);
     }
   }
-  dfs(piezaInicial, null, null);
-  return pasos;
+
+  dfs(piezaInicial);
+
+  return pasos.map((msg, i) => `Paso ${i + 1}: ${msg}`);
 }
+
 
 // ---- ENDPOINT ----
 const buildPuzzleSteps = async (req, res) => {

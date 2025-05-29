@@ -193,8 +193,14 @@ body {
     font-size: 0.95rem;
     transition: all 0.3s ease;
     background-color: white;
+    color: #000000; /* Color del texto que escribe el usuario */
 }
 
+.puzzle-select option {
+    color: #000000; /* Color del texto dentro del dropdown */
+    background-color: white;
+}
+    
 .puzzle-input:focus {
     outline: none;
     border-color: #3b82f6;
@@ -210,6 +216,7 @@ body {
     background-color: white;
     cursor: pointer;
     transition: all 0.3s ease;
+    color: #000000;
 }
 
 .puzzle-select:focus {
