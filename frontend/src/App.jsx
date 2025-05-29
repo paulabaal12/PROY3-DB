@@ -3,7 +3,6 @@ import { Plus, Trash2, Play, Puzzle, Search, CheckCircle, AlertCircle, Loader2 }
 import GrafoPuzzle from "./components/GrafoPuzzle"
 import './App.css'
 
-// URL del API - cambiar según tu configuración
 const API_URL = "http://localhost:3000/api"
 
 function App() {
@@ -28,6 +27,7 @@ function App() {
 
   // Estado para el grafo
   const [grafo, setGrafo] = useState({ nodes: [], edges: [] })
+  const [detallePuzzle, setDetallePuzzle] = useState(null)
 
   // Función para hacer peticiones HTTP
   const fetchData = async (url, options = {}) => {
@@ -184,6 +184,19 @@ function App() {
       {label}
     </button>
   )
+
+  const verDetallePuzzle = async (puzzleId) => {
+    setDetallePuzzle(null);
+    try {
+      const data = await fetchData(`${API_URL}/puzzles/${puzzleId}`);
+      setDetallePuzzle({
+        id: data.rompecabezas.id,
+        piezas: data.piezas,
+      });
+    } catch (err) {
+      setDetallePuzzle({ error: "No se pudo cargar el detalle del puzzle." });
+    }
+  };
 
   return (
     <div className="puzzle-app">
@@ -502,7 +515,12 @@ function App() {
             ) : puzzles.length > 0 ? (
               <div className="puzzle-grid">
                 {puzzles.map((puzzle, i) => (
-                  <div key={i} className="puzzle-item-card">
+                  <div
+                    key={i}
+                    className="puzzle-item-card"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => verDetallePuzzle(puzzle.id)}
+                  >
                     <div className="puzzle-item-header">
                       <Puzzle className="puzzle-item-icon" size={20} />
                       <div className="puzzle-item-content">
@@ -526,6 +544,30 @@ function App() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Puzzle Detail */}
+        {detallePuzzle && (
+          <div className="puzzle-modal-overlay" onClick={() => setDetallePuzzle(null)}>
+            <div className="puzzle-modal-card" onClick={e => e.stopPropagation()}>
+              <button className="puzzle-modal-close" onClick={() => setDetallePuzzle(null)}>×</button>
+              {detallePuzzle.error ? (
+                <p>{detallePuzzle.error}</p>
+              ) : (
+                <>
+                  <h3>Detalle de {detallePuzzle.id}</h3>
+                  <p>Cantidad de piezas: {detallePuzzle.piezas.length}</p>
+                  <ul>
+                    {detallePuzzle.piezas.map((pieza, idx) => (
+                      <li key={idx}>
+                        ID: {pieza.id}, Forma: {pieza.forma}, Posición: {pieza.posicion_relativa}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
