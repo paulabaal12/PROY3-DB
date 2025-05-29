@@ -33,13 +33,13 @@ function GrafoPuzzle({ nodes = [], edges = [] }) {
     const maxX = Math.max(...graphNodes.map(n => n.x));
     const minY = Math.min(...graphNodes.map(n => n.y));
     const maxY = Math.max(...graphNodes.map(n => n.y));
-    
+
     const graphWidth = maxX - minX;
     const graphHeight = maxY - minY;
-    
+
     const containerWidth = containerRef.current?.clientWidth || 800;
     const containerHeight = containerRef.current?.clientHeight || 400;
-    
+
     const offsetX = (containerWidth - graphWidth) / 2 - minX;
     const offsetY = (containerHeight - graphHeight) / 2 - minY;
 
@@ -55,30 +55,23 @@ function GrafoPuzzle({ nodes = [], edges = [] }) {
     setLayoutNodes(positionedNodes);
   }, [nodes, edges]);
 
-  const calculateTextOffset = (sourceNode, targetNode, edgeIndex) => {
+
+  const calculateTextOffsetFixed = (sourceNode, targetNode) => {
     const dx = targetNode.x - sourceNode.x;
     const dy = targetNode.y - sourceNode.y;
-    const angle = Math.atan2(dy, dx);
-    const baseOffset = 20;
-    const indexOffset = edgeIndex * 8;
-    let offsetX = 0;
-    let offsetY = -baseOffset - indexOffset;
-    if (Math.abs(dy) > Math.abs(dx)) {
-      if (dy > 0) {
-        offsetX = baseOffset + indexOffset;
-        offsetY = 0;
-      } else {
-        offsetX = -(baseOffset + indexOffset);
-        offsetY = 0;
-      }
-    } else {
-      if (dx > 0) {
-        offsetY = -(baseOffset + indexOffset);
-      } else {
-        offsetY = baseOffset + indexOffset;
-      }
-    }
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    const offsetDistance = 40; 
+    const offsetX = -dy / length * offsetDistance;
+    const offsetY = dx / length * offsetDistance;
+
     return { offsetX, offsetY };
+  };
+
+  const isReversedEdge = (source, target) => {
+    return edges.some(
+      (e) => e.source === target && e.target === source
+    );
   };
 
   const edgeElements = edges.map((edge, idx) => {
@@ -87,20 +80,31 @@ function GrafoPuzzle({ nodes = [], edges = [] }) {
 
     if (!sourceNode || !targetNode) return null;
 
-    const midX = (sourceNode.x + targetNode.x) / 2;
-    const midY = (sourceNode.y + targetNode.y) / 2;
-    
-    const { offsetX, offsetY } = calculateTextOffset(sourceNode, targetNode, idx);
+    const { x: x1, y: y1 } = sourceNode;
+    const { x: x2, y: y2 } = targetNode;
+
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+
+    const { offsetX, offsetY } = calculateTextOffsetFixed(sourceNode, targetNode);
+
+
+    const useCurve = isReversedEdge(edge.source, edge.target);
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dr = Math.sqrt(dx * dx + dy * dy) * 1.5;
+
+    const path = useCurve
+      ? `M${x1},${y1} A${dr},${dr} 0 0,1 ${x2},${y2}`
+      : `M${x1},${y1} L${x2},${y2}`;
 
     return (
       <g key={`edge-${idx}`}>
-        <line
-          x1={sourceNode.x}
-          y1={sourceNode.y}
-          x2={targetNode.x}
-          y2={targetNode.y}
+        <path
+          d={path}
           stroke="#10B981"
           strokeWidth="3"
+          fill="none"
           markerEnd="url(#arrowhead)"
         />
         <text
@@ -115,7 +119,7 @@ function GrafoPuzzle({ nodes = [], edges = [] }) {
             filter: 'drop-shadow(1px 1px 2px rgba(255,255,255,0.8))'
           }}
         >
-          {edge.label}
+          {edge.label && `${edge.label} - `}{`${edge.source} → ${edge.target}`}
         </text>
       </g>
     );
