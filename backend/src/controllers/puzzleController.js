@@ -274,12 +274,48 @@ const getAllPuzzles = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
-module.exports = { 
-  createPuzzle, 
-  getPuzzle, 
-  getPuzzleInstructions,
-  buildPuzzleSteps,  
-  getAllPuzzles
+// EDITAR rompecabezas
+const updatePuzzle = async (req, res) => {
+  const { id } = req.params;
+  const { tema, tipo } = req.body;
+  try {
+    const query = `
+      MATCH (r:Rompecabezas {id: $id})
+      SET r.tema = $tema, r.tipo = $tipo
+      RETURN r
+    `;
+    const result = await neo4j.executeQuery(query, { id, tema, tipo });
+    if (!result[0]) return res.status(404).json({ error: "Rompecabezas no encontrado" });
+    res.json({ message: "Rompecabezas actualizado" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
+
+// ELIMINAR rompecabezas y todo lo asociado
+const deletePuzzle = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Opcional: Elimina todo (rompecabezas, piezas, relaciones)
+    const query = `
+      MATCH (r:Rompecabezas {id: $id})
+      OPTIONAL MATCH (r)<-[:PERTENECE_A]-(p:Pieza)
+      DETACH DELETE r, p
+    `;
+    await neo4j.executeQuery(query, { id });
+    res.json({ message: "Rompecabezas y piezas asociadas eliminados" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+module.exports = {
+  createPuzzle,
+  getPuzzle,
+  getPuzzleInstructions,
+  buildPuzzleSteps,
+  getAllPuzzles,
+  updatePuzzle,   
+  deletePuzzle    
+}

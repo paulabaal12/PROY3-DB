@@ -1,11 +1,15 @@
 const express = require('express');
+// Importa TODOS los controladores que vas a usar
 const { 
   createPuzzle, 
-  getAllPuzzles, 
   getPuzzle, 
+  getAllPuzzles, 
   buildPuzzleSteps, 
-  getPuzzleInstructions 
+  getPuzzleInstructions, 
+  updatePuzzle,       // <-- AGREGAR ESTE
+  deletePuzzle        // <-- Y ESTE SI USAS DELETE
 } = require('../controllers/puzzleController');
+
 const router = express.Router();
 
 // Middleware de validación para el registro de puzzles
@@ -28,7 +32,12 @@ router.get('/', getAllPuzzles);
 
 // Obtener detalles de un puzzle por ID
 router.get('/:id', getPuzzle);
+// Editar puzzle
+router.put('/:id', updatePuzzle);      
+// Eliminar puzzle
+router.delete('/:id', deletePuzzle);    
 
+module.exports = router;
 // Obtener pasos de armado (BFS/DFS)
 router.get('/:id/steps', buildPuzzleSteps);
 
