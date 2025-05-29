@@ -1,11 +1,10 @@
-"use client"
-
 import { useState, useEffect } from "react"
-import axios from "axios"
 import { Plus, Trash2, Play, Puzzle, Search, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
-import GrafoPuzzle from "./components/GrafoPuzzle";
+import GrafoPuzzle from "./components/GrafoPuzzle"
+import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL
+// URL del API - cambiar según tu configuración
+const API_URL = "http://localhost:3000/api"
 
 function App() {
   // Estados para el registro
@@ -27,15 +26,79 @@ function App() {
   const [solvingLoading, setSolvingLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("register")
 
+  // Estado para el grafo
+  const [grafo, setGrafo] = useState({ nodes: [], edges: [] })
+
+  // Función para hacer peticiones HTTP
+  const fetchData = async (url, options = {}) => {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers
+        },
+        ...options
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      return await response.json()
+    } catch (err) {
+      console.error('Fetch error:', err)
+      throw err
+    }
+  }
+
   // Consulta de puzzles existentes
   useEffect(() => {
-    setLoading(true)
-    axios
-      .get(`${API_URL}/puzzles`)
-      .then((res) => setPuzzles(res.data))
-      .catch(() => setPuzzles([]))
-      .finally(() => setLoading(false))
+    const loadPuzzles = async () => {
+      setLoading(true)
+      try {
+        const data = await fetchData(`${API_URL}/puzzles`)
+        setPuzzles(Array.isArray(data) ? data : [])
+      } catch (err) {
+        setPuzzles([])
+        setError("Error al cargar los puzzles")
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadPuzzles()
   }, [message])
+
+  // Cargar datos del grafo cuando se selecciona un puzzle
+  useEffect(() => {
+    if (!selectedPuzzleId) {
+      setGrafo({ nodes: [], edges: [] })
+      return
+    }
+
+    const loadPuzzleData = async () => {
+      try {
+        const data = await fetchData(`${API_URL}/puzzles/${selectedPuzzleId}`)
+        const { piezas = [], conexiones = [] } = data
+        
+        setGrafo({
+          nodes: piezas.map((p) => ({
+            id: p.id,
+            label: `${p.id}\\n${p.forma}\\n${p.posicion_relativa}`,
+          })),
+          edges: conexiones.map((c) => ({
+            source: c.from,
+            target: c.to,
+            label: c.lado,
+          })),
+        })
+      } catch (err) {
+        setGrafo({ nodes: [], edges: [] })
+      }
+    }
+
+    loadPuzzleData()
+  }, [selectedPuzzleId])
 
   // Handlers para registro de rompecabezas
   const addPiece = () => setPieces([...pieces, { id: "", forma: "", posicion_relativa: "" }])
@@ -71,11 +134,15 @@ function App() {
     setLoading(true)
 
     try {
-      await axios.post(`${API_URL}/puzzles`, {
-        puzzle,
-        pieces,
-        connections,
+      await fetchData(`${API_URL}/puzzles`, {
+        method: 'POST',
+        body: JSON.stringify({
+          puzzle,
+          pieces,
+          connections,
+        })
       })
+      
       setMessage("¡Rompecabezas creado exitosamente!")
       setPuzzle({ id: "", tema: "", tipo: "" })
       setPieces([])
@@ -97,46 +164,20 @@ function App() {
     setSolvingLoading(true)
 
     try {
-      const res = await axios.get(`${API_URL}/puzzles/${selectedPuzzleId}/steps?start=${startId}&alg=${alg}`)
-      setPasos(res.data.instrucciones || [])
-    } catch {
+      const data = await fetchData(`${API_URL}/puzzles/${selectedPuzzleId}/steps?start=${startId}&alg=${alg}`)
+      setPasos(data.instrucciones || [])
+    } catch (err) {
       setError("No se pudo obtener los pasos. Verifique la pieza inicial y el rompecabezas seleccionado.")
     } finally {
       setSolvingLoading(false)
     }
   }
-  const [grafo, setGrafo] = useState({ nodes: [], edges: [] });
-
-  useEffect(() => {
-    if (!selectedPuzzleId) {
-      setGrafo({ nodes: [], edges: [] });
-      return;
-    }
-    // Consulta piezas y conexiones de este puzzle
-    axios
-      .get(`${API_URL}/puzzles/${selectedPuzzleId}`)
-      .then((res) => {
-        const { piezas, conexiones } = res.data;
-        setGrafo({
-          nodes: (piezas || []).map((p) => ({
-            id: p.id,
-            label: `${p.id}\n${p.forma}\n${p.posicion_relativa}`,
-          })),
-          edges: (conexiones || []).map((c) => ({
-            source: c.from,
-            target: c.to,
-            label: c.lado,
-          })),
-        });
-      })
-      .catch(() => setGrafo({ nodes: [], edges: [] }));
-  }, [selectedPuzzleId]);
   
   const TabButton = ({ id, label, icon: Icon }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-        activeTab === id ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+      className={`puzzle-tab-button ${
+        activeTab === id ? "puzzle-tab-active" : "puzzle-tab-inactive"
       }`}
     >
       <Icon size={18} />
@@ -145,19 +186,19 @@ function App() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
+    <div className="puzzle-app">
+      <div className="puzzle-container">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Puzzle className="text-blue-600" size={32} />
-            <h1 className="text-3xl font-bold text-gray-900">Puzzle Solver</h1>
+        <div className="puzzle-header">
+          <div className="puzzle-title">
+            <Puzzle className="puzzle-title-icon" size={32} />
+            <h1>Puzzle Solver</h1>
           </div>
-          <p className="text-gray-600">Registra y resuelve rompecabezas con algoritmos de búsqueda</p>
+          <p className="puzzle-subtitle">Registra y resuelve rompecabezas con algoritmos de búsqueda</p>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex gap-2 mb-8 justify-center">
+        <div className="puzzle-navigation">
           <TabButton id="register" label="Registrar" icon={Plus} />
           <TabButton id="solve" label="Resolver" icon={Play} />
           <TabButton id="view" label="Ver Puzzles" icon={Search} />
@@ -165,14 +206,14 @@ function App() {
 
         {/* Global Messages */}
         {message && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-800">
+          <div className="puzzle-message puzzle-message-success">
             <CheckCircle size={20} />
             {message}
           </div>
         )}
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-800">
+          <div className="puzzle-message puzzle-message-error">
             <AlertCircle size={20} />
             {error}
           </div>
@@ -180,71 +221,74 @@ function App() {
 
         {/* Register Tab */}
         {activeTab === "register" && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Registrar Nuevo Rompecabezas</h2>
+          <div className="puzzle-card">
+            <h2 className="puzzle-card-title">
+              <Plus size={24} />
+              Registrar Nuevo Rompecabezas
+            </h2>
 
-            <form onSubmit={submitPuzzle} className="space-y-6">
+            <form onSubmit={submitPuzzle} className="puzzle-form">
               {/* Puzzle Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">ID del Puzzle</label>
+              <div className="puzzle-form-grid">
+                <div className="puzzle-form-group">
+                  <label className="puzzle-label">ID del Puzzle</label>
                   <input
                     type="text"
                     placeholder="ej: puzzle_001"
                     value={puzzle.id}
                     required
                     onChange={(e) => setPuzzle({ ...puzzle, id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="puzzle-input"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tema</label>
+                <div className="puzzle-form-group">
+                  <label className="puzzle-label">Tema</label>
                   <input
                     type="text"
                     placeholder="ej: Paisaje, Animales"
                     value={puzzle.tema}
                     required
                     onChange={(e) => setPuzzle({ ...puzzle, tema: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="puzzle-input"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                <div className="puzzle-form-group">
+                  <label className="puzzle-label">Tipo</label>
                   <input
                     type="text"
                     placeholder="ej: 2D, 3D"
                     value={puzzle.tipo}
                     required
                     onChange={(e) => setPuzzle({ ...puzzle, tipo: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="puzzle-input"
                   />
                 </div>
               </div>
 
               {/* Pieces Section */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Piezas</h3>
+              <div className="puzzle-section">
+                <div className="puzzle-section-header">
+                  <h3 className="puzzle-section-title">Piezas</h3>
                   <button
                     type="button"
                     onClick={addPiece}
-                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="puzzle-button puzzle-button-primary puzzle-button-small"
                   >
                     <Plus size={16} />
                     Agregar Pieza
                   </button>
                 </div>
 
-                <div className="space-y-3">
+                <div className="puzzle-items-container">
                   {pieces.map((piece, i) => (
-                    <div key={i} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg">
+                    <div key={i} className="puzzle-item puzzle-piece-item">
                       <input
                         type="text"
                         placeholder="ID de la pieza"
                         value={piece.id}
                         required
                         onChange={(e) => handlePieceChange(i, "id", e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="puzzle-input"
                       />
                       <input
                         type="text"
@@ -252,7 +296,7 @@ function App() {
                         value={piece.forma}
                         required
                         onChange={(e) => handlePieceChange(i, "forma", e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="puzzle-input"
                       />
                       <input
                         type="text"
@@ -260,12 +304,12 @@ function App() {
                         value={piece.posicion_relativa}
                         required
                         onChange={(e) => handlePieceChange(i, "posicion_relativa", e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="puzzle-input"
                       />
                       <button
                         type="button"
                         onClick={() => removePiece(i)}
-                        className="flex items-center justify-center px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                        className="puzzle-button puzzle-button-danger puzzle-button-small"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -275,29 +319,29 @@ function App() {
               </div>
 
               {/* Connections Section */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Conexiones</h3>
+              <div className="puzzle-section">
+                <div className="puzzle-section-header">
+                  <h3 className="puzzle-section-title">Conexiones</h3>
                   <button
                     type="button"
                     onClick={addConnection}
-                    className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    className="puzzle-button puzzle-button-success puzzle-button-small"
                   >
                     <Plus size={16} />
                     Agregar Conexión
                   </button>
                 </div>
 
-                <div className="space-y-3">
+                <div className="puzzle-items-container">
                   {connections.map((connection, i) => (
-                    <div key={i} className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-gray-50 rounded-lg">
+                    <div key={i} className="puzzle-item puzzle-connection-item">
                       <input
                         type="text"
                         placeholder="ID Origen"
                         value={connection.sourceId}
                         required
                         onChange={(e) => handleConnectionChange(i, "sourceId", e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="puzzle-input"
                       />
                       <input
                         type="text"
@@ -305,7 +349,7 @@ function App() {
                         value={connection.targetId}
                         required
                         onChange={(e) => handleConnectionChange(i, "targetId", e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="puzzle-input"
                       />
                       <input
                         type="text"
@@ -313,7 +357,7 @@ function App() {
                         value={connection.sourceSide}
                         required
                         onChange={(e) => handleConnectionChange(i, "sourceSide", e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="puzzle-input"
                       />
                       <input
                         type="text"
@@ -321,12 +365,12 @@ function App() {
                         value={connection.targetSide}
                         required
                         onChange={(e) => handleConnectionChange(i, "targetSide", e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="puzzle-input"
                       />
                       <button
                         type="button"
                         onClick={() => removeConnection(i)}
-                        className="flex items-center justify-center px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                        className="puzzle-button puzzle-button-danger puzzle-button-small"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -336,13 +380,13 @@ function App() {
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-end">
+              <div className="puzzle-flex" style={{ justifyContent: 'flex-end' }}>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="puzzle-button puzzle-button-primary"
                 >
-                  {loading ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} />}
+                  {loading ? <Loader2 size={20} className="puzzle-spinner" /> : <Plus size={20} />}
                   {loading ? "Registrando..." : "Registrar Rompecabezas"}
                 </button>
               </div>
@@ -352,18 +396,21 @@ function App() {
 
         {/* Solve Tab */}
         {activeTab === "solve" && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Resolver Rompecabezas</h2>
+          <div className="puzzle-card">
+            <h2 className="puzzle-card-title">
+              <Play size={24} />
+              Resolver Rompecabezas
+            </h2>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="puzzle-results">
               {/* Controls */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Rompecabezas</label>
+              <div className="puzzle-form">
+                <div className="puzzle-form-group">
+                  <label className="puzzle-label">Seleccionar Rompecabezas</label>
                   <select
                     value={selectedPuzzleId}
                     onChange={(e) => setSelectedPuzzleId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="puzzle-select"
                   >
                     <option value="">Seleccione un rompecabezas</option>
                     {puzzles.map((p) => (
@@ -374,23 +421,23 @@ function App() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Pieza Inicial</label>
+                <div className="puzzle-form-group">
+                  <label className="puzzle-label">Pieza Inicial</label>
                   <input
                     type="text"
                     placeholder="ID de la pieza inicial"
                     value={startId}
                     onChange={(e) => setStartId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="puzzle-input"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Algoritmo</label>
+                <div className="puzzle-form-group">
+                  <label className="puzzle-label">Algoritmo</label>
                   <select
                     value={alg}
                     onChange={(e) => setAlg(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="puzzle-select"
                   >
                     <option value="bfs">BFS (Búsqueda en Anchura)</option>
                     <option value="dfs">DFS (Búsqueda en Profundidad)</option>
@@ -400,37 +447,39 @@ function App() {
                 <button
                   onClick={obtenerPasos}
                   disabled={!selectedPuzzleId || !startId || solvingLoading}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="puzzle-button puzzle-button-success"
                 >
-                  {solvingLoading ? <Loader2 size={20} className="animate-spin" /> : <Play size={20} />}
+                  {solvingLoading ? <Loader2 size={20} className="puzzle-spinner" /> : <Play size={20} />}
                   {solvingLoading ? "Resolviendo..." : "Resolver Puzzle"}
                 </button>
+
+                {/* Visualización del Grafo */}
+                <div className="puzzle-mt-4">
+                  <h3 className="puzzle-section-title puzzle-mb-4">Visualización del Puzzle</h3>
+                  <GrafoPuzzle nodes={grafo.nodes} edges={grafo.edges} />
+                </div>
               </div>
 
               {/* Results */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Pasos de Solución</h3>
+                <h3 className="puzzle-section-title puzzle-mb-4">Pasos de Solución</h3>
                 {pasos.length > 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-                    <ol className="space-y-2">
+                  <div className="puzzle-steps-container">
+                    <ol className="puzzle-steps-list">
                       {pasos.map((paso, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                          <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                        <li key={i} className="puzzle-step-item">
+                          <span className="puzzle-step-number">
                             {i + 1}
                           </span>
-                          <span className="text-gray-700">{paso}</span>
+                          <span className="puzzle-step-text">{paso}</span>
                         </li>
                       ))}
                     </ol>
-                    <div className="my-8">
-                    <h3 className="font-semibold text-gray-800 mb-2">Visualización del Grafo del Puzzle</h3>
-                    <GrafoPuzzle nodes={grafo.nodes} edges={grafo.edges} />
-                  </div>
                   </div>
                 ) : (
-                  <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-                    <Puzzle size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>Los pasos de solución aparecerán aquí</p>
+                  <div className="puzzle-empty-state">
+                    <Puzzle size={48} className="puzzle-empty-icon" />
+                    <p className="puzzle-empty-text">Los pasos de solución aparecerán aquí</p>
                   </div>
                 )}
               </div>
@@ -440,35 +489,38 @@ function App() {
 
         {/* View Tab */}
         {activeTab === "view" && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Rompecabezas Registrados</h2>
+          <div className="puzzle-card">
+            <h2 className="puzzle-card-title">
+              <Search size={24} />
+              Rompecabezas Registrados
+            </h2>
 
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 size={32} className="animate-spin text-blue-600" />
+              <div className="puzzle-loading">
+                <Loader2 size={32} className="puzzle-spinner" />
               </div>
             ) : puzzles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="puzzle-grid">
                 {puzzles.map((puzzle, i) => (
-                  <div key={i} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-start gap-3">
-                      <Puzzle className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate">{puzzle.id}</h3>
-                        <p className="text-sm text-gray-600 mt-1">Tema: {puzzle.tema}</p>
-                        <p className="text-sm text-gray-600">Tipo: {puzzle.tipo}</p>
+                  <div key={i} className="puzzle-item-card">
+                    <div className="puzzle-item-header">
+                      <Puzzle className="puzzle-item-icon" size={20} />
+                      <div className="puzzle-item-content">
+                        <h3 className="puzzle-item-title">{puzzle.id}</h3>
+                        <p className="puzzle-item-meta">Tema: {puzzle.tema}</p>
+                        <p className="puzzle-item-meta">Tipo: {puzzle.tipo}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Puzzle size={48} className="mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500">No hay rompecabezas registrados</p>
+              <div className="puzzle-empty-state">
+                <Puzzle size={48} className="puzzle-empty-icon" />
+                <p className="puzzle-empty-text">No hay rompecabezas registrados</p>
                 <button
                   onClick={() => setActiveTab("register")}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="puzzle-button puzzle-button-primary puzzle-mt-4"
                 >
                   Registrar el primero
                 </button>
