@@ -161,7 +161,11 @@ function recorridoBFS(grafo, piezaInicial) {
     if (visitados.has(actual)) continue;
     visitados.add(actual);
     if (anterior) {
-      pasos.push(`Conecta la pieza ${actual} al lado ${lado} de ${anterior}`);
+      if (lado === 'arriba' || lado === 'abajo') {
+        pasos.push(`Conecta la pieza ${actual} ${lado} de ${anterior}`);
+      } else {
+        pasos.push(`Conecta la pieza ${actual} al lado ${lado} de ${anterior}`);
+      }
     }
     for (const conn of (grafo[actual] || [])) {
       if (!visitados.has(conn.destinoId)) {
@@ -179,7 +183,11 @@ function recorridoDFS(grafo, piezaInicial) {
   function dfs(actual, anterior, lado) {
     visitados.add(actual);
     if (anterior) {
-      pasos.push(`Conecta la pieza ${actual} al lado ${lado} de ${anterior}`);
+      if (lado === 'arriba' || lado === 'abajo') {
+        pasos.push(`Conecta la pieza ${actual} ${lado} de ${anterior}`);
+      } else {
+        pasos.push(`Conecta la pieza ${actual} al lado ${lado} de ${anterior}`);
+      }
     }
     for (const conn of (grafo[actual] || [])) {
       if (!visitados.has(conn.destinoId)) {
