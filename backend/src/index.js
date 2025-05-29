@@ -2,7 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
+
 const puzzleRoutes = require('./routes/puzzleRoutes');
+const pieceRoutes = require('./routes/pieces');          // <--- AÑADE ESTO
+const connectionRoutes = require('./routes/connections'); // <--- AÑADE ESTO
 
 const app = express();
 
@@ -12,8 +15,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 app.use('/api/puzzles', puzzleRoutes);
+app.use('/api/pieces', pieceRoutes);          // <--- AÑADE ESTO
+app.use('/api/connections', connectionRoutes); // <--- AÑADE ESTO
 
 // Manejo de errores
 app.use((err, req, res, next) => {
@@ -24,7 +28,13 @@ app.use((err, req, res, next) => {
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(` Servidor ejecutándose en http://localhost:${PORT}`);
-    console.log(` Endpoint de rompecabezas: POST http://localhost:${PORT}/api/puzzles`);
-    require('./menu')
+    console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
+    console.log(`Endpoints disponibles:`);
+    console.log(`  - POST   /api/puzzles`);
+    console.log(`  - GET    /api/puzzles/:id`);
+    console.log(`  - GET    /api/pieces`);
+    console.log(`  - GET    /api/pieces/:id`);
+    console.log(`  - GET    /api/connections`);
+    console.log(`  - GET    /api/connections/:id`);
+    require('./menu'); // Menú interactivo por consola
 });
